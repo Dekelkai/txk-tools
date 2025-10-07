@@ -1,11 +1,11 @@
 // 在 Windows 发布版本中防止弹出额外的控制台窗口
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::{Window, Emitter};
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::io::{BufRead, BufReader};
 use std::thread;
+use tauri::{Emitter, Window};
 
 #[tauri::command]
 fn run_python_dev(window: Window, args: Vec<String>) -> Result<(), String> {
@@ -65,7 +65,9 @@ fn run_python_dev(window: Window, args: Vec<String>) -> Result<(), String> {
     let window_clone = window.clone();
     thread::spawn(move || {
         let status = child.wait().ok().and_then(|s| s.code());
-        let code_str = status.map(|c| c.to_string()).unwrap_or_else(|| "unknown".into());
+        let code_str = status
+            .map(|c| c.to_string())
+            .unwrap_or_else(|| "unknown".into());
         let _ = window_clone.emit("backend://terminated", code_str);
     });
 
@@ -75,6 +77,7 @@ fn run_python_dev(window: Window, args: Vec<String>) -> Result<(), String> {
 // 应用入口
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![run_python_dev])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
