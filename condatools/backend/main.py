@@ -9,16 +9,36 @@ import os
 import re
 
 def log(line: str, stream="stdout"):
+    """
+    日志输出函数，可输出到 stdout 或 stderr。
+    :param line: 日志内容
+    :param stream: 输出流，"stdout" 或 "stderr"
+    """
     print(line, flush=True, file=sys.stdout if stream == "stdout" else sys.stderr)
 
 def emit_result(command: str, data: dict):
+    """
+    将命令执行结果以 JSON 格式输出，用于前端或其他调用者解析。
+    :param command: 命令名称
+    :param data: 命令执行结果数据
+    """
     result = {"command": command, **data}
     print(json.dumps(result), flush=True)
 
 def get_conda_path():
+    """
+    获取系统中 conda 可执行文件的路径
+    :return: conda 可执行文件路径或 None
+    """
     return shutil.which("conda")
 
 def run_conda_command_for_json(args: list, command_name: str):
+    """
+    执行 conda 命令并解析 JSON 输出
+    :param args: conda 命令参数列表
+    :param command_name: 命令名称，用于 emit_result
+    :return: (success, data) success 为布尔值，data 为解析后的 JSON
+    """
     conda_path = get_conda_path()
     if not conda_path:
         emit_result(command_name, {"ok": False, "error": "Conda not found in PATH"})
@@ -36,6 +56,13 @@ def run_conda_command_for_json(args: list, command_name: str):
         return False, None
 
 def stream_conda_command(args: list, command_name: str, emit_final_result=True) -> bool:
+    """
+    执行 conda 命令并实时打印输出（用于长时间运行的命令）
+    :param args: conda 命令参数列表
+    :param command_name: 命令名称
+    :param emit_final_result: 是否在命令结束后 emit JSON 结果
+    :return: True 表示命令成功，否则 False
+    """
     conda_path = get_conda_path()
     if not conda_path:
         if emit_final_result: emit_result(command_name, {"ok": False, "error": "Conda not found in PATH"})
@@ -145,9 +172,11 @@ def main():
     parser = argparse.ArgumentParser(prog="txk-backend")
     sub = parser.add_subparsers(dest="command", required=True)
     
+    # 环境列表
     sub.add_parser("probe", help="Probe conda availability").set_defaults(func=cmd_probe)
     sub.add_parser("env-list", help="List all conda environments").set_defaults(func=cmd_env_list)
     
+    # 包列表
     pkg_parser = sub.add_parser("pkg-list", help="List packages in an environment")
     pkg_parser.add_argument("--prefix", required=True)
     pkg_parser.set_defaults(func=cmd_pkg_list)
